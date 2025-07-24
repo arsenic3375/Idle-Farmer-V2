@@ -1,0 +1,24 @@
+html, 
+body {
+    overflow: hidden;
+    margin: 0px;
+    padding: 0px;
+    width: 100vw;
+    height: 100vh;
+}
+
+#grid {
+    height: calc(var(--rows)*(var(--s)*1px));
+    width: calc(var(--cols)*(var(--s)*1px));
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    background: black;
+}
+
+.cell {
+    cursor: default;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
