@@ -5,52 +5,109 @@ class Cell {
         this.y = y;
         this.tile = new Grass(this);
 
-        this.img = document.createElement("img");
         this.div = document.createElement("div");
         this.div.style.setProperty("--x", x);
         this.div.style.setProperty("--y", y);
         this.div.classList.add("cell");
-        this.div.appendChild(this.img);
         this.div.addEventListener('click', (event) => {
             this.setTile(new Wheat(this));
             console.log(this);
         });
-    }
 
-    addEventListener(eventListener) {
-        this.eventListeners.push(eventListener);
-    }
-
-    dispatch(event) { 
-        this.eventListeners.forEach((eventListener) => {
-            if(eventListener.type === event.type) {
-                eventListener.listener(event.detail); 
-            }
-        }); 
+        this.div.appendChild(this.tile.tileDiv);
+        this.div.appendChild(this.tile.subtilesDiv);
     }
 
     update() {
         this.tile.update();
-        this.img.src = "sprites/"+this.tile.name+"/"+this.tile.position+".png";
     }
 
     setTile(tile) {
         this.tile = tile;
         this.grid.setNeighborhood(this.tile.home, this.tile.neighborhood);
+
+        this.div.innerHTML = ""; 
+        
+        this.div.appendChild(this.tile.tileDiv);
+        this.div.appendChild(this.tile.subtilesDiv);
+    }
+}
+
+class Subtile {
+    constructor(name, position) {
+        this.name = name;
+        this.type = "connection";
+        this.position = position;
+
+        this.img = document.createElement("img");
+        this.div = document.createElement("div");
+        this.div.appendChild(this.img);
+    }
+
+    update() {
+        this.img.src = "sprites/"+this.name+"/"+this.position+"/"+this.type+".png";
+    }
+}
+
+class Center extends Subtile {
+    constructor(name, position) {
+        super(name, position);
+        this.div.classList.add("center");
+        this.div.appendChild(this.img);
+    }
+}
+
+class Edge extends Subtile {
+    constructor(name, position) {
+        super(name, position);
+        this.div.classList.add("edge");
+
+        if(this.position == "top" || this.position == "bottom") {
+            this.div.classList.add("horizontal");
+        }
+
+        if(this.position == "left" || this.position == "right") {
+            this.div.classList.add("vertical");
+        }
+    }
+}
+
+class Corner extends Subtile {
+    constructor(name, position) {
+        super(name, position);
+        this.div.classList.add("corner");
     }
 }
 
 class Tile {
     constructor(name, home) {
+        this.subtiles = [[new Corner("fence", "top-left"), new Edge("fence", "top"), new Corner("fence", "top-right")],
+                         [new Edge("fence", "left"), new Center("fence", "center"), new Edge("fence", "right")],
+                         [new Corner("fence", "bottom-left"), new Edge("fence", "bottom"), new Corner("fence", "bottom-right")]];
+
         this.name = name;
         this.type = "";
 
         this.orientation = "";
         this.position = "11111111";
-        this.state = "";
+        this.state = "base";
 
         this.home = home;
         this.neighborhood = [];
+
+        this.img = document.createElement("img");
+        this.tileDiv = document.createElement("div");
+        this.tileDiv.classList.add("tile")
+        this.tileDiv.appendChild(this.img)
+
+        this.subtilesDiv = document.createElement("div");
+        this.subtilesDiv.classList.add("subtiles")
+        
+        for(let i = 0; i < this.subtiles.length; i++) {
+            for(let j = 0; j < this.subtiles[i].length; j++) {
+                this.subtilesDiv.appendChild(this.subtiles[i][j].div);
+            }
+        }
     }
 
     update() {}
@@ -60,6 +117,16 @@ class Grass extends Tile {
     constructor(home) {
         super("grass", home);
         this.neighborhood = [[home]];
+    }
+
+    update() {
+        this.img.src = "sprites/"+this.name+"/"+this.state+".png";
+
+        for(let i = 0; i < this.subtiles.length; i++) {
+            for(let j = 0; j < this.subtiles[i].length; j++) {
+                this.subtiles[i][j].update();
+            }
+        }
     }
 }
 
@@ -75,36 +142,119 @@ class Wheat extends Tile {
 
     update() {
         let position = [];
-        for(let i = 0; i < this.neighborhood.length; i++) {
-            for(let j = 0; j < this.neighborhood[i].length; j++) {
-                    if(this.neighborhood[i][j].tile.name == this.home.tile.name) {
-                        position.push(1);
-                    }
-                    else {
-                        position.push(0);
-                    }
+        let neighborhood = this.neighborhood.flat()
+        let subtiles = this.subtiles.flat();
+
+        neighborhood.forEach((neighbor) => {
+            if(neighbor.tile.name == this.name) {
+                    position.push(1);
                 }
+                else {
+                    position.push(0);
+                }
+        });
+
+        if(position[0] == 0) {
+            subtiles[0].type = "inverted-corner"
+        }
+        else {
+            subtiles[0].type = "connection"
         }
         
+        if(position[2] == 0) {
+            subtiles[2].type = "inverted-corner"
+        }
+        else {
+            subtiles[2].type = "connection"
+        }
+
+        if(position[6] == 0) {
+            subtiles[6].type = "inverted-corner"
+        }
+        else {
+            subtiles[6].type = "connection"
+        }
+
+        if(position[8] == 0) {
+            subtiles[8].type = "inverted-corner"
+        }
+        else {
+            subtiles[8].type = "connection"
+        }
+
+
         if(position[1] == 0) {
             position[0] = 0;
             position[2] = 0;
+            
+            subtiles[0].type = "horizontal"
+            subtiles[1].type = "barrier"
+            subtiles[2].type = "horizontal"
         }
+        else {
+            subtiles[1].type = "connection"
+        }
+
         if(position[3] == 0) {
             position[0] = 0;
             position[6] = 0;
+            
+            subtiles[0].type = "vertical"
+            subtiles[3].type = "barrier"
+            subtiles[6].type = "vertical"
         }
+        else {
+            subtiles[3].type = "connection"
+        }
+
         if(position[5] == 0) {
             position[2] = 0;
             position[8] = 0;
+            
+            subtiles[2].type = "vertical"
+            subtiles[5].type = "barrier"
+            subtiles[8].type = "vertical"
         }
+        else {
+            subtiles[5].type = "connection"
+        }
+
         if(position[7] == 0) {
             position[6] = 0;
             position[8] = 0;
+            
+            subtiles[6].type = "horizontal"
+            subtiles[7].type = "barrier"
+            subtiles[8].type = "horizontal"
         }
+        else {
+            subtiles[7].type = "connection"
+        }
+
+
+        if(position[1] == 0 && position[3] == 0) {
+            subtiles[0].type = "corner"
+        }
+
+        if(position[1] == 0 && position[5] == 0) {
+            subtiles[2].type = "corner"
+        }
+
+        if(position[7] == 0 && position[3] == 0) {
+            subtiles[6].type = "corner"
+        }
+
+        if(position[7] == 0 && position[5] == 0) {
+            subtiles[8].type = "corner"
+        }
+        
         
         position.splice(4, 1);
         this.position = position.join("");
+
+        this.img.src = "sprites/"+this.name+"/"+this.state+".png";
+
+        subtiles.forEach((subtile) => { subtile.update() });
     }
 }
 
